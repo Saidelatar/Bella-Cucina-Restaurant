@@ -25,15 +25,23 @@
         }
       }
     },
-    "/offers": {
+   "/offers": {
       "get": {
         "summary": "Get current offers and promotions",
         "operationId": "getCurrentOffers",
-        "description": "Returns all currently active promotions. No authentication required.",
+        "description": "Returns all currently active promotions. Requires OAuth 2.0 token (get token from POST /oauth/token).",
         "tags": ["Offers"],
+        "security": [
+          {
+            "oauth2Auth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of active offers"
+          },
+          "401": {
+            "description": "Invalid or missing OAuth token"
           }
         }
       }
@@ -333,6 +341,17 @@
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "description": "JWT token from POST /auth/token"
+      },
+
+      "oauth2Auth": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "https://bella-cucina-restaurant-production.up.railway.app/oauth/token",
+            "scopes": {}
+          }
+        },
+        "description": "Client ID: bella-cucina-client, Client Secret: bella-cucina-secret-2026"
       }
     }
   }

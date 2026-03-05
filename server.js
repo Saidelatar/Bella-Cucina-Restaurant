@@ -13,6 +13,9 @@ const BEARER_TOKEN = "bella-cucina-bearer-token-2026";
 const BASIC_USER = "bella";
 const BASIC_PASS = "cucina123";
 const JWT_SECRET = "bella-cucina-jwt-secret-2026";
+const OAUTH_CLIENT_ID = "bella-cucina-client";
+const OAUTH_CLIENT_SECRET = "bella-cucina-secret-2026";
+let oauthTokens = {};
 
 // ============================================================
 // MENU DATA
@@ -145,10 +148,21 @@ app.get("/menu", (req, res) => {
 // ============================================================
 // 2. GET /offers — No Auth
 // ============================================================
+// ============================================================
+// 2. GET /offers — OAuth 2.0
+// ============================================================
 app.get("/offers", (req, res) => {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing OAuth token" });
+  }
+  const token = authHeader.split(" ")[1];
+  if (!oauthTokens[token]) {
+    return res.status(401).json({ error: "Invalid or expired OAuth token" });
+  }
+
   res.json(offers);
 });
-
 // ============================================================
 // 3. POST /orders — API Key (x-api-key header)
 // ============================================================
@@ -337,7 +351,25 @@ app.get("/loyalty/:phone", (req, res) => {
 
   res.json(account);
 });
-
+// ============================================================
+// OAUTH 2.0 TOKEN ENDPOINT
+// ============================================================
+app.post("/oauth/token", (req, res) => {
+  const { grant_type, client_id, client_secret } = req.body;
+  if (grant_type !== "client_credentials") {
+    return res.status(400).json({ error: "Only client_credentials grant type is supported" });
+  }
+  if (client_id !== OAUTH_CLIENT_ID || client_secret !== OAUTH_CLIENT_SECRET) {
+    return res.status(401).json({ error: "Invalid client credentials" });
+  }
+  const token = "oauth-" + Math.random().toString(36).substring(2) + Date.now();
+  oauthTokens[token] = { client_id, created_at: Date.now(), expires_in: 3600 };
+  res.json({
+    access_token: token,
+    token_type: "Bearer",
+    expires_in: 3600
+  });
+});
 // ============================================================
 // JWT TOKEN GENERATOR (for testing)
 // ============================================================

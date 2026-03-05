@@ -1,8 +1,18 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ============================================================
+// AUTH CREDENTIALS
+// ============================================================
+const API_KEY = "bella-cucina-api-key-2026";
+const BEARER_TOKEN = "bella-cucina-bearer-token-2026";
+const BASIC_USER = "bella";
+const BASIC_PASS = "cucina123";
+const JWT_SECRET = "bella-cucina-jwt-secret-2026";
 
 // ============================================================
 // MENU DATA
@@ -110,12 +120,12 @@ let reservations = {};
 let resCounter = 1;
 
 // ============================================================
-// HELPER: find menu item by id
+// HELPER: find menu item by id or name
 // ============================================================
 function findMenuItem(idOrName) {
   for (const cat of menu.categories) {
-    const item = cat.items.find(i => 
-      i.id === idOrName || 
+    const item = cat.items.find(i =>
+      i.id === idOrName ||
       i.id === Number(idOrName) ||
       i.name.toLowerCase() === String(idOrName).toLowerCase() ||
       i.name_ar === String(idOrName)
@@ -124,24 +134,30 @@ function findMenuItem(idOrName) {
   }
   return null;
 }
+
 // ============================================================
-// 1. GET /menu — Full Menu
+// 1. GET /menu — No Auth
 // ============================================================
 app.get("/menu", (req, res) => {
   res.json(menu);
 });
 
 // ============================================================
-// 2. GET /offers — Current Offers
+// 2. GET /offers — No Auth
 // ============================================================
 app.get("/offers", (req, res) => {
   res.json(offers);
 });
 
 // ============================================================
-// 3. POST /orders — Place Order
+// 3. POST /orders — API Key (x-api-key header)
 // ============================================================
 app.post("/orders", (req, res) => {
+  const key = req.headers["x-api-key"];
+  if (!key || key !== API_KEY) {
+    return res.status(401).json({ error: "Invalid or missing API Key" });
+  }
+
   const { customer_name, phone, items, order_type, address } = req.body;
 
   if (!customer_name || !phone || !items || !order_type) {
@@ -158,7 +174,7 @@ app.post("/orders", (req, res) => {
   for (const item of items) {
     const menuItem = findMenuItem(item.item_id || item.name || item.item_name);
     if (!menuItem) {
-      return res.status(400).json({ error: `Menu item with id ${item.item_id} not found` });
+      return res.status(400).json({ error: `Menu item '${item.item_id || item.name || item.item_name}' not found` });
     }
     const qty = item.quantity || 1;
     const lineTotal = menuItem.price * qty;
@@ -198,9 +214,14 @@ app.post("/orders", (req, res) => {
 });
 
 // ============================================================
-// 4. GET /orders/:id — Order Status
+// 4. GET /orders/:id — Bearer Token
 // ============================================================
 app.get("/orders/:id", (req, res) => {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || authHeader !== `Bearer ${BEARER_TOKEN}`) {
+    return res.status(401).json({ error: "Invalid or missing Bearer Token" });
+  }
+
   const order = orders[req.params.id] || orders[req.params.id.toUpperCase()];
   if (!order) {
     return res.status(404).json({ error: `Order ${req.params.id} not found` });
@@ -209,9 +230,20 @@ app.get("/orders/:id", (req, res) => {
 });
 
 // ============================================================
-// 5. POST /reservations — Make Reservation
+// 5. POST /reservations — Basic Auth
 // ============================================================
 app.post("/reservations", (req, res) => {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Basic ")) {
+    return res.status(401).json({ error: "Missing Basic Auth header" });
+  }
+  const base64 = authHeader.split(" ")[1];
+  const decoded = Buffer.from(base64, "base64").toString("utf-8");
+  const [user, pass] = decoded.split(":");
+  if (user !== BASIC_USER || pass !== BASIC_PASS) {
+    return res.status(401).json({ error: "Invalid username or password" });
+  }
+
   const { customer_name, phone, date, time, guests, special_requests } = req.body;
 
   if (!customer_name || !phone || !date || !time || !guests) {
@@ -244,7 +276,7 @@ app.post("/reservations", (req, res) => {
 });
 
 // ============================================================
-// 6. POST /delivery/check — Check Delivery Area
+// 6. POST /delivery/check — No Auth
 // ============================================================
 app.post("/delivery/check", (req, res) => {
   const { area } = req.body;
@@ -280,9 +312,20 @@ app.post("/delivery/check", (req, res) => {
 });
 
 // ============================================================
-// 7. GET /loyalty/:phone — Check Loyalty Points
+// 7. GET /loyalty/:phone — JWT
 // ============================================================
 app.get("/loyalty/:phone", (req, res) => {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing JWT token" });
+  }
+  const token = authHeader.split(" ")[1];
+  try {
+    jwt.verify(token, JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid JWT: " + err.message });
+  }
+
   const phone = req.params.phone;
   const account = loyaltyAccounts[phone];
 
@@ -296,24 +339,17 @@ app.get("/loyalty/:phone", (req, res) => {
 });
 
 // ============================================================
-// ROOT — API Info
+// JWT TOKEN GENERATOR (for testing)
 // ============================================================
-app.get("/", (req, res) => {
-  res.json({
-    name: "Bella Cucina Restaurant API",
-    version: "2.0.0",
-    description: "API for Bella Cucina Italian Restaurant",
-    endpoints: [
-      { method: "GET", path: "/menu", description: "Get full menu with prices" },
-      { method: "GET", path: "/offers", description: "Get current offers and promotions" },
-      { method: "POST", path: "/orders", description: "Place a new food order" },
-      { method: "GET", path: "/orders/:id", description: "Track order status" },
-      { method: "POST", path: "/reservations", description: "Make a table reservation" },
-      { method: "POST", path: "/delivery/check", description: "Check delivery availability" },
-      { method: "GET", path: "/loyalty/:phone", description: "Check loyalty points" }
-    ]
-  });
+app.post("/auth/token", (req, res) => {
+  const { username, password } = req.body;
+  if (username === BASIC_USER && password === BASIC_PASS) {
+    const token = jwt.sign({ username, role: "customer" }, JWT_SECRET, { expiresIn: "1h" });
+    return res.json({ token, expires_in: "1h" });
+  }
+  res.status(401).json({ error: "Invalid credentials" });
 });
+
 // ============================================================
 // OPENAPI SPEC
 // ============================================================
@@ -321,6 +357,34 @@ app.get("/openapi.json", (req, res) => {
   const spec = require("./openapi.json");
   res.json(spec);
 });
+
+// ============================================================
+// ROOT — API Info
+// ============================================================
+app.get("/", (req, res) => {
+  res.json({
+    name: "Bella Cucina Restaurant API",
+    version: "2.0.0",
+    description: "API for Bella Cucina Italian Restaurant",
+    auth_credentials: {
+      api_key: API_KEY,
+      bearer_token: BEARER_TOKEN,
+      basic_auth: { username: BASIC_USER, password: BASIC_PASS },
+      jwt: "POST /auth/token with username & password to get JWT token"
+    },
+    endpoints: [
+      { method: "GET", path: "/menu", auth: "No Auth", description: "Get full menu" },
+      { method: "GET", path: "/offers", auth: "No Auth", description: "Get current offers" },
+      { method: "POST", path: "/orders", auth: "API Key (x-api-key header)", description: "Place order" },
+      { method: "GET", path: "/orders/:id", auth: "Bearer Token", description: "Track order" },
+      { method: "POST", path: "/reservations", auth: "Basic Auth", description: "Make reservation" },
+      { method: "POST", path: "/delivery/check", auth: "No Auth", description: "Check delivery" },
+      { method: "GET", path: "/loyalty/:phone", auth: "JWT", description: "Check loyalty points" },
+      { method: "POST", path: "/auth/token", auth: "No Auth", description: "Get JWT token" }
+    ]
+  });
+});
+
 // ============================================================
 // START SERVER
 // ============================================================

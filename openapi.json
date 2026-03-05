@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bella Cucina Restaurant API",
-    "description": "Dynamic API tools for Bella Cucina Restaurant. Static info (working hours, contact, policies, payment methods) is handled by the Knowledge Base.",
+    "description": "API for Bella Cucina Italian Restaurant with authentication",
     "version": "2.0.0"
   },
   "servers": [
@@ -16,78 +16,11 @@
       "get": {
         "summary": "Get full menu with prices",
         "operationId": "getFullMenu",
-        "description": "Returns the complete restaurant menu with all categories, items, prices, and dietary info. Use this when a customer asks about the menu, food options, prices, or specific dishes.",
+        "description": "Returns the complete restaurant menu. No authentication required.",
         "tags": ["Menu"],
         "responses": {
           "200": {
-            "description": "Full menu with categories and items",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "restaurant": {
-                      "type": "string",
-                      "example": "Bella Cucina"
-                    },
-                    "categories": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "name": {
-                            "type": "string",
-                            "example": "Main Courses"
-                          },
-                          "name_ar": {
-                            "type": "string",
-                            "example": "الأطباق الرئيسية"
-                          },
-                          "items": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "integer",
-                                  "example": 3
-                                },
-                                "name": {
-                                  "type": "string",
-                                  "example": "Margherita Pizza"
-                                },
-                                "name_ar": {
-                                  "type": "string",
-                                  "example": "بيتزا مارجريتا"
-                                },
-                                "description": {
-                                  "type": "string",
-                                  "example": "Classic pizza with fresh mozzarella, tomato sauce, and basil"
-                                },
-                                "price": {
-                                  "type": "number",
-                                  "example": 120
-                                },
-                                "currency": {
-                                  "type": "string",
-                                  "example": "EGP"
-                                },
-                                "is_vegetarian": {
-                                  "type": "boolean"
-                                },
-                                "is_gluten_free": {
-                                  "type": "boolean"
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "description": "Full menu with categories and items"
           }
         }
       }
@@ -96,61 +29,11 @@
       "get": {
         "summary": "Get current offers and promotions",
         "operationId": "getCurrentOffers",
-        "description": "Returns all currently active promotions, discounts, and special offers. Use this when a customer asks about deals, discounts, or current promotions.",
+        "description": "Returns all currently active promotions. No authentication required.",
         "tags": ["Offers"],
         "responses": {
           "200": {
-            "description": "List of active offers",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "total": {
-                      "type": "integer"
-                    },
-                    "offers": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "example": "offer_1"
-                          },
-                          "title": {
-                            "type": "string",
-                            "example": "Family Friday"
-                          },
-                          "title_ar": {
-                            "type": "string",
-                            "example": "جمعة العيلة"
-                          },
-                          "description": {
-                            "type": "string",
-                            "example": "20% off on all main courses every Friday"
-                          },
-                          "discount_percent": {
-                            "type": "integer",
-                            "example": 20
-                          },
-                          "valid_days": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "valid_until": {
-                            "type": "string",
-                            "format": "date"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "description": "List of active offers"
           }
         }
       }
@@ -159,8 +42,13 @@
       "post": {
         "summary": "Place a new food order",
         "operationId": "placeOrder",
-        "description": "Places a new food order for delivery or pickup. Requires customer name, phone, items with quantities, and order type. Use this when a customer wants to order food.",
+        "description": "Places a new food order. Requires API Key in x-api-key header.",
         "tags": ["Orders"],
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -184,7 +72,11 @@
                       "properties": {
                         "item_id": {
                           "type": "integer",
-                          "example": 3
+                          "example": 4
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Margherita Pizza"
                         },
                         "quantity": {
                           "type": "integer",
@@ -213,32 +105,10 @@
         },
         "responses": {
           "201": {
-            "description": "Order placed successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "order_id": {
-                      "type": "string",
-                      "example": "ORD-2026-001"
-                    },
-                    "status": {
-                      "type": "string",
-                      "example": "received"
-                    },
-                    "total": {
-                      "type": "number",
-                      "example": 350
-                    },
-                    "estimated_delivery": {
-                      "type": "string",
-                      "example": "45 minutes"
-                    }
-                  }
-                }
-              }
-            }
+            "description": "Order placed successfully"
+          },
+          "401": {
+            "description": "Invalid or missing API Key"
           }
         }
       }
@@ -247,8 +117,13 @@
       "get": {
         "summary": "Track order status",
         "operationId": "getOrderStatus",
-        "description": "Returns the current status and details of an existing order by order ID. Use this when a customer wants to track or check on their order.",
+        "description": "Returns order details. Requires Bearer Token.",
         "tags": ["Orders"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -262,46 +137,10 @@
         ],
         "responses": {
           "200": {
-            "description": "Order details and current status",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "order_id": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": ["received", "preparing", "on_the_way", "delivered", "cancelled"]
-                    },
-                    "items": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "name": {
-                            "type": "string"
-                          },
-                          "quantity": {
-                            "type": "integer"
-                          },
-                          "price": {
-                            "type": "number"
-                          }
-                        }
-                      }
-                    },
-                    "total": {
-                      "type": "number"
-                    },
-                    "estimated_delivery": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
+            "description": "Order details and status"
+          },
+          "401": {
+            "description": "Invalid or missing Bearer Token"
           },
           "404": {
             "description": "Order not found"
@@ -313,8 +152,13 @@
       "post": {
         "summary": "Make a table reservation",
         "operationId": "createReservation",
-        "description": "Creates a new table reservation. Requires customer name, phone, date, time, and number of guests. Use this when a customer wants to book a table.",
+        "description": "Creates a new table reservation. Requires Basic Auth (username: bella, password: cucina123).",
         "tags": ["Reservations"],
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -355,40 +199,10 @@
         },
         "responses": {
           "201": {
-            "description": "Reservation created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "reservation_id": {
-                      "type": "string",
-                      "example": "RES-2026-015"
-                    },
-                    "customer_name": {
-                      "type": "string"
-                    },
-                    "date": {
-                      "type": "string"
-                    },
-                    "time": {
-                      "type": "string"
-                    },
-                    "guests": {
-                      "type": "integer"
-                    },
-                    "status": {
-                      "type": "string",
-                      "example": "confirmed"
-                    },
-                    "table_number": {
-                      "type": "integer",
-                      "example": 7
-                    }
-                  }
-                }
-              }
-            }
+            "description": "Reservation created"
+          },
+          "401": {
+            "description": "Invalid Basic Auth credentials"
           }
         }
       }
@@ -397,7 +211,7 @@
       "post": {
         "summary": "Check delivery availability for an area",
         "operationId": "checkDeliveryArea",
-        "description": "Checks if delivery is available for a specific area and returns the delivery fee, estimated time, and minimum order amount. Use this when a customer asks if you deliver to their area.",
+        "description": "Checks if delivery is available. No authentication required.",
         "tags": ["Delivery"],
         "requestBody": {
           "required": true,
@@ -418,34 +232,7 @@
         },
         "responses": {
           "200": {
-            "description": "Delivery availability and details for the area",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "available": {
-                      "type": "boolean"
-                    },
-                    "area": {
-                      "type": "string"
-                    },
-                    "delivery_fee": {
-                      "type": "number",
-                      "example": 25
-                    },
-                    "estimated_time": {
-                      "type": "string",
-                      "example": "30-45 minutes"
-                    },
-                    "minimum_order": {
-                      "type": "number",
-                      "example": 150
-                    }
-                  }
-                }
-              }
-            }
+            "description": "Delivery availability info"
           }
         }
       }
@@ -454,8 +241,13 @@
       "get": {
         "summary": "Check loyalty points balance",
         "operationId": "getLoyaltyPoints",
-        "description": "Returns the loyalty points balance, tier level, and available rewards for a customer. Use this when a customer asks about their points or rewards.",
+        "description": "Returns loyalty points. Requires JWT token (get token from POST /auth/token).",
         "tags": ["Loyalty"],
+        "security": [
+          {
+            "jwtAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "phone",
@@ -469,53 +261,78 @@
         ],
         "responses": {
           "200": {
-            "description": "Loyalty account details",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "phone": {
-                      "type": "string"
-                    },
-                    "customer_name": {
-                      "type": "string"
-                    },
-                    "points": {
-                      "type": "integer",
-                      "example": 450
-                    },
-                    "tier": {
-                      "type": "string",
-                      "enum": ["bronze", "silver", "gold"],
-                      "example": "silver"
-                    },
-                    "available_rewards": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "reward_id": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "points_required": {
-                            "type": "integer"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "description": "Loyalty account details"
+          },
+          "401": {
+            "description": "Invalid or missing JWT"
           },
           "404": {
             "description": "Customer not found"
           }
         }
+      }
+    },
+    "/auth/token": {
+      "post": {
+        "summary": "Get JWT token",
+        "operationId": "getAuthToken",
+        "description": "Get a JWT token for authenticated endpoints. Use username: bella, password: cucina123",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "example": "bella"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "cucina123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JWT token"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "API Key: bella-cucina-api-key-2026"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Bearer Token: bella-cucina-bearer-token-2026"
+      },
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "Username: bella, Password: cucina123"
+      },
+      "jwtAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token from POST /auth/token"
       }
     }
   }

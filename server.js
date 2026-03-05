@@ -112,14 +112,18 @@ let resCounter = 1;
 // ============================================================
 // HELPER: find menu item by id
 // ============================================================
-function findMenuItem(id) {
+function findMenuItem(idOrName) {
   for (const cat of menu.categories) {
-    const item = cat.items.find(i => i.id === id);
+    const item = cat.items.find(i => 
+      i.id === idOrName || 
+      i.id === Number(idOrName) ||
+      i.name.toLowerCase() === String(idOrName).toLowerCase() ||
+      i.name_ar === String(idOrName)
+    );
     if (item) return item;
   }
   return null;
 }
-
 // ============================================================
 // 1. GET /menu — Full Menu
 // ============================================================
@@ -152,7 +156,7 @@ app.post("/orders", (req, res) => {
   let total = 0;
 
   for (const item of items) {
-    const menuItem = findMenuItem(item.item_id);
+    const menuItem = findMenuItem(item.item_id || item.name || item.item_name);
     if (!menuItem) {
       return res.status(400).json({ error: `Menu item with id ${item.item_id} not found` });
     }

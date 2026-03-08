@@ -29,7 +29,7 @@
       "get": {
         "summary": "Get current offers and promotions",
         "operationId": "getCurrentOffers",
-        "description": "Returns all currently active promotions. Requires OAuth 2.0 token (get token from POST /oauth/token).",
+        "description": "Returns all currently active promotions.",
         "tags": ["Offers"],
         "security": [
           {

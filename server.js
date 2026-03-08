@@ -355,8 +355,25 @@ app.get("/loyalty/:phone", (req, res) => {
 // ============================================================
 // OAUTH 2.0 TOKEN ENDPOINT
 // ============================================================
+// ============================================================
+// OAUTH 2.0 TOKEN ENDPOINT
+// ============================================================
 app.post("/oauth/token", (req, res) => {
-  const { grant_type, client_id, client_secret } = req.body;
+  let client_id, client_secret, grant_type;
+
+  // Check Basic Auth header first
+  const authHeader = req.headers["authorization"];
+  if (authHeader && authHeader.startsWith("Basic ")) {
+    const base64 = authHeader.split(" ")[1];
+    const decoded = Buffer.from(base64, "base64").toString("utf-8");
+    [client_id, client_secret] = decoded.split(":");
+    grant_type = req.body.grant_type || "client_credentials";
+  } else {
+    client_id = req.body.client_id;
+    client_secret = req.body.client_secret;
+    grant_type = req.body.grant_type || "client_credentials";
+  }
+
   if (grant_type !== "client_credentials") {
     return res.status(400).json({ error: "Only client_credentials grant type is supported" });
   }
